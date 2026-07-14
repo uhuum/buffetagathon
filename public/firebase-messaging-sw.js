@@ -1,63 +1,90 @@
 // Firebase Messaging Service Worker
-// Este arquivo é servido pelo Next.js e registrado automaticamente.
 
 importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js')
 importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging-compat.js')
 
-// As variáveis de ambiente não estão disponíveis no service worker,
-// então as configurações são injetadas em tempo de build via next.config.mjs
-// ou lidas do self.__FIREBASE_CONFIG__ que é definido abaixo.
-// Para simplificar, lemos a config do cabeçalho da página via postMessage
-// ou carregamos diretamente as variáveis via query string no momento do registro.
 
-// A configuração será injetada pelo componente FCMProvider via postMessage
-let firebaseConfig = null
-
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'FIREBASE_CONFIG') {
-    firebaseConfig = event.data.config
-    initFirebase()
-  }
+firebase.initializeApp({
+  apiKey: "AIzaSyBY_GavdUKo9XmMtK42c08NROTNEhfuQ7s",
+  authDomain: "buffet-agathonn.firebaseapp.com",
+  projectId: "buffet-agathonn",
+  storageBucket: "buffet-agathonn.firebasestorage.app",
+  messagingSenderId: "190239501960",
+  appId: "1:190239501960:web:4745a4749551e0c5e1b93d"
 })
 
-function initFirebase() {
-  if (!firebaseConfig) return
-  if (firebase.apps.length === 0) {
-    firebase.initializeApp(firebaseConfig)
-  }
 
-  const messaging = firebase.messaging()
+const messaging = firebase.messaging()
 
-  // Tratar mensagens em background (app fechado ou em segundo plano)
-  messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw] Mensagem em background recebida:', payload)
 
-    const notificationTitle = payload.notification?.title || 'Buffet Agathon'
-    const notificationOptions = {
-      body: payload.notification?.body || '',
-      icon: '/pwa-192.png',
-      badge: '/pwa-192.png',
-      data: payload.data || {},
-      vibrate: [200, 100, 200],
-      tag: payload.data?.tag || 'buffet-agathon',
-      renotify: true,
-    }
+messaging.onBackgroundMessage((payload) => {
 
-    return self.registration.showNotification(notificationTitle, notificationOptions)
-  })
-}
-
-// Ao clicar na notificação, focar/abrir o app
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close()
-  event.waitUntil(
-    clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        if (clientList.length > 0) {
-          return clientList[0].focus()
-        }
-        return clients.openWindow('/')
-      }),
+  console.log(
+    '[firebase-messaging-sw] Mensagem recebida:',
+    payload
   )
+
+
+  const notificationTitle =
+    payload.notification?.title ||
+    'Buffet Agathon'
+
+
+  const notificationOptions = {
+
+    body:
+      payload.notification?.body ||
+      'Nova notificação',
+
+    icon: '/icon.svg',
+
+    badge: '/icon.svg',
+
+    data: payload.data || {},
+
+    vibrate: [200,100,200],
+
+    tag: 'buffet-agathon',
+
+    renotify: true
+
+  }
+
+
+  self.registration.showNotification(
+    notificationTitle,
+    notificationOptions
+  )
+
 })
+
+
+
+self.addEventListener(
+  'notificationclick',
+  (event)=>{
+
+    event.notification.close()
+
+    event.waitUntil(
+
+      clients.matchAll({
+        type:'window',
+        includeUncontrolled:true
+      })
+      .then((clientList)=>{
+
+        if(clientList.length > 0){
+
+          return clientList[0].focus()
+
+        }
+
+        return clients.openWindow('/')
+
+      })
+
+    )
+
+  }
+)

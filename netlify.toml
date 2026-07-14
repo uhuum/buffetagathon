@@ -6,6 +6,9 @@
   command   = "pnpm build"
   publish   = ".next"
 
+[build.environment]
+  SECRETS_SCAN_OMIT_PATHS = "public/firebase-messaging-sw.js"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 

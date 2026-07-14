@@ -56,3 +56,4 @@ export type Page =
   | 'exportar'
   | 'configuracoes'
   | 'detalhes'
+  | 'admin-notificacoes'

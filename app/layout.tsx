@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
+import { FCMProvider } from '@/components/fcm-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -43,6 +44,7 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased`}>
         {children}
         <ServiceWorkerRegister />
+        <FCMProvider />
       </body>
     </html>
   )

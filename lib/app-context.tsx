@@ -85,11 +85,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addFesta = async (festaData: Omit<Festa, 'id' | 'criadoEm'>) => {
     const nova = await createFesta(festaData)
     setFestas(prev => [...prev, nova])
+    // Disparar notificação de nova festa (fire-and-forget)
+    fetch('/api/notifications/triggers/festa-criada', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tema: nova.tema,
+        data: nova.data,
+        horario: nova.horario,
+        cliente: nova.responsavel,
+      }),
+    }).catch(err => console.error('[AppContext] Trigger festa-criada falhou:', err))
   }
 
   const updateFesta = async (id: string, festaData: Omit<Festa, 'id' | 'criadoEm'>) => {
     const atualizada = await updateFestaRow(id, festaData)
     setFestas(prev => prev.map(f => (f.id === id ? atualizada : f)))
+    // Disparar notificação de festa alterada (fire-and-forget)
+    fetch('/api/notifications/triggers/festa-alterada', { method: 'POST' })
+      .catch(err => console.error('[AppContext] Trigger festa-alterada falhou:', err))
   }
 
   const setConcluida = async (id: string, concluida: boolean) => {
@@ -99,11 +113,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const atualizada = await updateFestaRow(id, { ...rest, concluida })
     setFestas(prev => prev.map(f => (f.id === id ? atualizada : f)))
     setViewingFesta(prev => (prev && prev.id === id ? atualizada : prev))
+    // Disparar notificação de festa cancelada quando uma festa é des-concluída (revertida)
+    if (!concluida) {
+      fetch('/api/notifications/triggers/festa-cancelada', { method: 'POST' })
+        .catch(err => console.error('[AppContext] Trigger festa-cancelada falhou:', err))
+    }
   }
 
   const deleteFesta = async (id: string) => {
     await deleteFestaRow(id)
     setFestas(prev => prev.filter(f => f.id !== id))
+    // Disparar notificação de festa cancelada (fire-and-forget)
+    fetch('/api/notifications/triggers/festa-cancelada', { method: 'POST' })
+      .catch(err => console.error('[AppContext] Trigger festa-cancelada falhou:', err))
   }
 
   if (!hydrated) return null

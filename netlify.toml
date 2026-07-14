@@ -1,0 +1,44 @@
+# =============================================================
+# Netlify — Configuração do Buffet Agathon
+# =============================================================
+
+[build]
+  command   = "pnpm build"
+  publish   = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# As Scheduled Functions ficam em netlify/functions/
+[functions]
+  directory = "netlify/functions"
+
+# =============================================================
+# Cron Jobs — Scheduled Functions
+# Todos os horários em UTC. Horário de Brasília (BRT) = UTC-3.
+# =============================================================
+
+# Toda segunda-feira às 09:00 BRT (12:00 UTC)
+# Envia resumo das festas do final de semana (sex, sáb, dom)
+[functions."cron-agenda-fim-de-semana"]
+  schedule = "0 12 * * 1"
+
+# Todos os dias às 09:00 BRT (12:00 UTC)
+# Envia lembrete para festas que ocorrem daqui a 3 dias
+[functions."cron-tres-dias-antes"]
+  schedule = "0 12 * * *"
+
+# Todos os dias às 18:00 BRT (21:00 UTC)
+# Envia lembrete para festas que ocorrem amanhã
+[functions."cron-um-dia-antes"]
+  schedule = "0 21 * * *"
+
+# Todos os dias às 08:00 BRT (11:00 UTC)
+# Envia "Bom trabalho!" com a quantidade de festas do dia
+[functions."cron-no-dia"]
+  schedule = "0 11 * * *"
+
+# A cada hora exata (ex: 10:00, 11:00, 12:00...)
+# Verifica festas que começam em aproximadamente 1 hora
+[functions."cron-uma-hora-antes"]
+  schedule = "0 * * * *"

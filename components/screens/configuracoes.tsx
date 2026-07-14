@@ -1,11 +1,11 @@
 'use client'
 
 import Image from 'next/image'
-import { User, Lock, Info, Trash2 } from 'lucide-react'
+import { User, Info, Bell, ChevronRight } from 'lucide-react'
 import { useApp } from '@/lib/app-context'
 
 export function ConfiguracoesScreen() {
-  const { festas } = useApp()
+  const { festas, navigate } = useApp()
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -76,7 +76,28 @@ export function ConfiguracoesScreen() {
             </div>
           </div>
 
-
+          {/* Administração */}
+          <div>
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Bell size={15} style={{ color: '#c9a227' }} />
+              Notificações Push
+            </h3>
+            <button
+              onClick={() => navigate('admin-notificacoes')}
+              className="w-full flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3.5 text-sm hover:bg-muted/40 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Bell size={18} className="text-primary" />
+                <div className="text-left">
+                  <p className="font-medium text-foreground">Painel de Notificações</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Gerenciar dispositivos e enviar notificações
+                  </p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground" />
+            </button>
+          </div>
         </div>
       </div>
 

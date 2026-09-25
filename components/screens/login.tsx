@@ -7,7 +7,7 @@ import { useApp } from '@/lib/app-context'
 
 export function LoginScreen() {
   const { login } = useApp()
-  const [email, setE-mail] = useState('')
+  const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [showSenha, setShowSenha] = useState(false)
   const [erro, setErro] = useState('')
@@ -18,7 +18,7 @@ export function LoginScreen() {
     setLoading(true)
     setErro('')
     const ok = await login(email, senha)
-    if (!ok) setErro('Usuário ou senha inválidos.')
+    if (!ok) setErro('E-mail ou senha inválidos.')
     setLoading(false)
   }
 
@@ -80,7 +80,7 @@ export function LoginScreen() {
                 type="email"
                 autoComplete="email"
                 value={email}
-                onChange={e => setE-mail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 placeholder="Digite seu e-mail"
                 required
                 className="w-full rounded-xl border-2 border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition"

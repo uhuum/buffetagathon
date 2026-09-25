@@ -4,53 +4,33 @@ import { sendPushNotificationToMany } from '@/lib/fcm-server'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { title, body: notifBody, data } = body
-
-    if (!title || !notifBody) {
-      return NextResponse.json(
-        { message: 'Campos obrigatórios: title, body' },
-        { status: 400 },
-      )
-    }
-
+    const { title, body: notifBody, data } = await request.json()
+    if (!title || !notifBody) return NextResponse.json({ message: 'Campos obrigatorios: title, body' }, { status: 400 })
     const supabase = createServiceClient()
+    const { data: rows, error } = await supabase.from('device_tokens').select('id, token').eq('is_active', true)
+    if (error) return NextResponse.json({ message: error.message }, { status: 500 })
+    const tokens = rows ?? []
+    if (!tokens.length) return NextResponse.json({ success: true, sent: 0, failed: 0, total: 0 })
 
-    // Buscar todos os tokens ativos
-    const { data: tokens, error } = await supabase
-      .from('device_tokens')
-      .select('token')
-      .eq('is_active', true)
+    const result = await sendPushNotificationToMany(tokens.map((r: any) => r.token), title, notifBody, data)
+    if (result.invalidTokens.length) await supabase.from('device_tokens').update({ is_active: false }).in('token', result.invalidTokens)
 
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 })
-    }
+    const byToken = new Map(tokens.map((r: any) => [r.token, r.id]))
+    await supabase.from('notification_deliveries').insert(result.deliveries.map((d) => ({
+      token_id: byToken.get(d.token) ?? null,
+      token_preview: d.token.slice(0, 12) + '...',
+      title,
+      body: notifBody,
+      notification_type: data?.type ?? 'manual',
+      status: d.success ? 'sent' : result.invalidTokens.includes(d.token) ? 'invalid' : 'failed',
+      provider_message_id: d.messageId ?? null,
+      error: d.error ?? null,
+      attempt_count: d.attempts,
+    })))
 
-    const tokenList = (tokens ?? []).map((t: { token: string }) => t.token)
-
-    if (tokenList.length === 0) {
-      return NextResponse.json({ success: true, sent: 0, failed: 0, message: 'Nenhum token registrado' })
-    }
-
-    const result = await sendPushNotificationToMany(tokenList, title, notifBody, data)
-
-    // Marcar tokens inválidos como inativos
-    if (result.invalidTokens.length > 0) {
-      await supabase
-        .from('device_tokens')
-        .update({ is_active: false })
-        .in('token', result.invalidTokens)
-      console.log(`[API send-all] ${result.invalidTokens.length} tokens inválidos desativados.`)
-    }
-
-    return NextResponse.json({
-      success: true,
-      sent: result.sent,
-      failed: result.failed,
-      total: tokenList.length,
-    })
+    return NextResponse.json({ success: result.failed === 0, sent: result.sent, failed: result.failed, total: tokens.length })
   } catch (err) {
-    console.error('[API send-all] Erro inesperado:', err)
+    console.error('[API send-all]', err)
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 })
   }
 }

@@ -1,88 +1,50 @@
 'use client'
-
 import { useEffect, useRef } from 'react'
-import { requestNotificationPermission, setupForegroundMessageListener } from '@/lib/firebase'
+import { ensureNotificationToken, setupForegroundMessageListener } from '@/lib/firebase'
 import { saveDeviceToken } from '@/lib/device-tokens-service'
 
-/**
- * FCMProvider registra o service worker do Firebase, solicita permissão
- * de notificação, obtém o token FCM e o salva no Supabase.
- * Deve ser montado uma única vez, dentro do AppProvider.
- */
 export function FCMProvider() {
   const initialized = useRef(false)
-
   useEffect(() => {
-    if (initialized.current) return
+    if (initialized.current || typeof window === 'undefined' || !('serviceWorker' in navigator)) return
     initialized.current = true
-
-    if (typeof window === 'undefined') return
-    if (!('serviceWorker' in navigator)) return
+    let foregroundUnsubscribe: (() => void) | undefined
 
     const setup = async () => {
       try {
-        // 1. Registrar o service worker do Firebase Messaging
-        const swRegistration = await navigator.serviceWorker.register(
-          '/firebase-messaging-sw.js',
-          { scope: '/' },
-        )
-        console.log('[FCM] Service worker registrado:', swRegistration.scope)
+        // Um unico SW controla PWA e FCM. Remove o worker legado se ainda existir.
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        for (const reg of registrations) {
+          if (reg.active?.scriptURL.endsWith('/firebase-messaging-sw.js')) await reg.unregister()
+        }
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+        await registration.update().catch(() => {})
+        await navigator.serviceWorker.ready
 
-        // 2. Enviar a configuração Firebase ao service worker via postMessage
-        const config = {
-          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        // Nao abre popup de permissao automaticamente. Se o usuario ja autorizou,
+        // renova/reativa silenciosamente o token em toda abertura.
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const token = await ensureNotificationToken(registration)
+          if (token) await saveDeviceToken(token)
         }
 
-        const sendConfig = () => {
-          if (swRegistration.active) {
-            swRegistration.active.postMessage({ type: 'FIREBASE_CONFIG', config })
-          }
-        }
-
-        if (swRegistration.active) {
-          sendConfig()
-        } else {
-          swRegistration.addEventListener('updatefound', () => {
-            const worker = swRegistration.installing
-            worker?.addEventListener('statechange', () => {
-              if (worker.state === 'activated') sendConfig()
-            })
-          })
-        }
-
-        // 3. Solicitar permissão e obter token FCM
-        const token = await requestNotificationPermission()
-        if (token) {
-          await saveDeviceToken(token)
-        }
-
-        // 4. Listener para mensagens em primeiro plano (exibe como notificação nativa)
-        setupForegroundMessageListener(({ title, body }) => {
+        foregroundUnsubscribe = await setupForegroundMessageListener(({ title, body }) => {
+          // Evita duplicidade: em foreground usamos a notificacao local uma unica vez.
           if (Notification.permission === 'granted') {
-            new Notification(title, {
-              body,
-              icon: '/pwa-192.png',
-              badge: '/pwa-192.png',
-            })
+            registration.showNotification(title, { body, icon: '/pwa-192.png', badge: '/pwa-192.png', tag: 'agathon-foreground' })
           }
         })
       } catch (err) {
-        console.error('[FCM] Erro na inicialização:', err)
+        console.error('[Push] Falha na inicializacao:', err)
       }
     }
-
-    // Aguardar o app estar pronto
-    if (document.readyState === 'complete') {
-      setup()
-    } else {
-      window.addEventListener('load', setup, { once: true })
+    setup()
+    const onVisible = () => { if (document.visibilityState === 'visible') setup() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      foregroundUnsubscribe?.()
     }
   }, [])
-
   return null
 }

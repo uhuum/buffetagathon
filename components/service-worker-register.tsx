@@ -1,24 +1,9 @@
 'use client'
-
 import { useEffect } from 'react'
 
+// O registro do SW e feito pelo FCMProvider para garantir que PWA e push
+// usem exatamente a mesma registration/scope.
 export function ServiceWorkerRegister() {
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
-
-    const register = () => {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
-        console.error('[v0] Falha ao registrar service worker:', err)
-      })
-    }
-
-    if (document.readyState === 'complete') {
-      register()
-    } else {
-      window.addEventListener('load', register)
-      return () => window.removeEventListener('load', register)
-    }
-  }, [])
-
+  useEffect(() => {}, [])
   return null
 }

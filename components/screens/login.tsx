@@ -7,7 +7,7 @@ import { useApp } from '@/lib/app-context'
 
 export function LoginScreen() {
   const { login } = useApp()
-  const [email, setEmail] = useState('')
+  const [usuario, setUsuario] = useState('')
   const [senha, setSenha] = useState('')
   const [showSenha, setShowSenha] = useState(false)
   const [erro, setErro] = useState('')
@@ -17,8 +17,8 @@ export function LoginScreen() {
     e.preventDefault()
     setLoading(true)
     setErro('')
-    const ok = await login(email, senha)
-    if (!ok) setErro('E-mail ou senha inválidos.')
+    const ok = await login(usuario, senha)
+    if (!ok) setErro('Usuário ou senha inválidos.')
     setLoading(false)
   }
 
@@ -72,15 +72,15 @@ export function LoginScreen() {
           </div>
 <form onSubmit={handleSubmit} className="px-8 py-8 space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-foreground mb-1.5">
-                E-mail
+              <label htmlFor="usuario" className="block text-sm font-semibold text-foreground mb-1.5">
+                Usuário
               </label>
               <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                id="usuario"
+                type="text"
+                autoComplete="username"
+                value={usuario}
+                onChange={e => setUsuario(e.target.value)}
                 placeholder="Digite seu e-mail"
                 required
                 className="w-full rounded-xl border-2 border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition"

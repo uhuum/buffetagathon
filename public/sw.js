@@ -2,8 +2,8 @@
 importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js')
 importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging-compat.js')
 
-const CACHE_NAME = 'agathon-cache-v2'
-const APP_SHELL = ['/', '/manifest.webmanifest', '/pwa-192.png', '/pwa-512.png', '/logo.png']
+const CACHE_NAME = 'agathon-static-v3'
+const STATIC_ASSETS = ['/pwa-192.png', '/pwa-512.png', '/logo.png']
 firebase.initializeApp({
   apiKey: 'AIzaSyBY_GavdUKo9XmMtK42c08NROTNEhfuQ7s',
   authDomain: 'buffet-agathonn.firebaseapp.com',
@@ -15,7 +15,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging()
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).catch(() => {}))
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)).catch(() => {}))
   self.skipWaiting()
 })
 self.addEventListener('activate', (event) => {
@@ -24,54 +24,43 @@ self.addEventListener('activate', (event) => {
     self.clients.claim(),
   ]))
 })
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
+})
+
+// HTML, Next.js, APIs e Supabase: sempre rede. Cache somente de arquivos estaticos.
 self.addEventListener('fetch', (event) => {
   const { request } = event
+  if (request.method !== 'GET') return
   const url = new URL(request.url)
-  if (request.method !== 'GET' || url.hostname.includes('supabase')) return
-  if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).then((response) => {
-      const copy = response.clone()
-      caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
-      return response
-    }).catch(() => caches.match(request).then((cached) => cached || caches.match('/'))))
-    return
-  }
-  event.respondWith(caches.match(request).then((cached) => {
-    const network = fetch(request).then((response) => {
-      if (response && response.status === 200 && url.origin === self.location.origin) {
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()))
-      }
-      return response
-    }).catch(() => cached)
-    return cached || network
-  }))
+  const dynamic = request.mode === 'navigate' || url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/') || url.hostname.includes('supabase')
+  if (dynamic) return
+
+  const isStatic = STATIC_ASSETS.includes(url.pathname) || /\.(png|jpg|jpeg|svg|ico|woff2?)$/i.test(url.pathname)
+  if (!isStatic) return
+  event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+    if (response.ok && url.origin === self.location.origin) caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()))
+    return response
+  })))
 })
 
 messaging.onBackgroundMessage((payload) => {
-  // Quando FCM envia "notification", o SDK ja pode exibi-la. So mostramos
-  // manualmente mensagens data-only para impedir notificacoes duplicadas.
   if (payload.notification) return
-  const title = payload.data?.title || 'Buffet Agathon'
-  const options = {
+  self.registration.showNotification(payload.data?.title || 'Buffet Agathon', {
     body: payload.data?.body || 'Nova atualizacao disponivel',
     icon: '/pwa-192.png',
     badge: '/pwa-192.png',
     tag: payload.data?.tag || payload.data?.type || 'agathon',
     renotify: true,
     data: payload.data || {},
-  }
-  self.registration.showNotification(title, options)
+  })
 })
-
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const target = event.notification.data?.url || '/'
   event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-    const sameOrigin = list.find((client) => new URL(client.url).origin === self.location.origin)
-    if (sameOrigin) {
-      sameOrigin.navigate?.(target)
-      return sameOrigin.focus()
-    }
+    const client = list.find((c) => new URL(c.url).origin === self.location.origin)
+    if (client) { client.navigate?.(target); return client.focus() }
     return clients.openWindow(target)
   }))
 })

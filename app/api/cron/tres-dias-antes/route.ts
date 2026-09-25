@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendPushNotificationToMany } from '@/lib/fcm-server'
-import { format, addDays } from 'date-fns'
+import { addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 export async function GET(request: NextRequest) {
@@ -36,30 +36,19 @@ export async function GET(request: NextRequest) {
     const tokenList = (tokens ?? []).map((t: { token: string }) => t.token)
     if (tokenList.length === 0) return NextResponse.json({ success: true, sent: 0 })
 
-    let totalSent = 0
+    const count = festas?.length ?? 0
+    if (count === 0) return NextResponse.json({ success: true, festas: 0, sent: 0 })
 
-    for (const festa of festas ?? []) {
-      const dataFormatada = format(new Date(`${festa.data}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })
-      const title = 'Sua festa está chegando'
-      const body = `Faltam apenas 3 dias para a festa!\n\nTema: ${festa.tema}\nData: ${dataFormatada}\nHorário: ${festa.horario}\nCliente: ${festa.responsavel}`
+    const title = 'Agenda do final de semana'
+    const body = `Esse final de semana tem ${count} festa${count > 1 ? 's' : ''}, não esqueça! Entre e confira mais detalhes.`
+    const result = await sendPushNotificationToMany(tokenList, title, body, { type: 'tres_dias_antes' })
 
-      const result = await sendPushNotificationToMany(tokenList, title, body, {
-        type: 'tres_dias_antes',
-        festa_id: festa.id,
-      })
-
-      totalSent += result.sent
-
-      if (result.invalidTokens.length > 0) {
-        await supabase
-          .from('device_tokens')
-          .update({ is_active: false })
-          .in('token', result.invalidTokens)
-      }
+    if (result.invalidTokens.length > 0) {
+      await supabase.from('device_tokens').update({ is_active: false }).in('token', result.invalidTokens)
     }
 
-    console.log(`[Cron tres-dias-antes] ${festas?.length ?? 0} festas, ${totalSent} notificações enviadas.`)
-    return NextResponse.json({ success: true, festas: festas?.length ?? 0, sent: totalSent })
+    console.log(`[Cron tres-dias-antes] ${count} festas, ${result.sent} notificações enviadas.`)
+    return NextResponse.json({ success: true, festas: count, sent: result.sent })
   } catch (err) {
     console.error('[Cron tres-dias-antes] Erro:', err)
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 })

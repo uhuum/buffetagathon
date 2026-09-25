@@ -45,22 +45,21 @@ export async function GET(request: NextRequest) {
     const tokenList = (tokens ?? []).map((t: { token: string }) => t.token)
     if (tokenList.length === 0) return NextResponse.json({ success: true, sent: 0 })
 
-    const title = 'Sua festa começa em 1 hora'
-    const body = 'Confira endereço, horário e informações da festa.'
-
-    const result = await sendPushNotificationToMany(tokenList, title, body, {
-      type: 'uma_hora_antes',
-    })
-
-    if (result.invalidTokens.length > 0) {
-      await supabase
-        .from('device_tokens')
-        .update({ is_active: false })
-        .in('token', result.invalidTokens)
+    let totalSent = 0
+    const invalidTokens = new Set<string>()
+    for (const festa of festas ?? []) {
+      const title = `A festa das ${festa.horario} começa em 1 hora!`
+      const body = 'Entre no Agathon e confira os detalhes da festa.'
+      const result = await sendPushNotificationToMany(tokenList, title, body, { type: 'uma_hora_antes', festa_id: festa.id })
+      totalSent += result.sent
+      result.invalidTokens.forEach((token) => invalidTokens.add(token))
+    }
+    if (invalidTokens.size > 0) {
+      await supabase.from('device_tokens').update({ is_active: false }).in('token', Array.from(invalidTokens))
     }
 
-    console.log(`[Cron uma-hora-antes] ${count} festas, ${result.sent} notificações enviadas.`)
-    return NextResponse.json({ success: true, festas: count, sent: result.sent })
+    console.log(`[Cron uma-hora-antes] ${count} festas, ${totalSent} notificações enviadas.`)
+    return NextResponse.json({ success: true, festas: count, sent: totalSent })
   } catch (err) {
     console.error('[Cron uma-hora-antes] Erro:', err)
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 })

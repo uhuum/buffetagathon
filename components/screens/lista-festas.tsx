@@ -102,7 +102,7 @@ export function ListaFestasScreen() {
       try {
         await deleteFesta(deletingFesta.id)
       } catch (err) {
-        console.error('[v0] Erro ao excluir festa:', err)
+        console.error('Erro ao excluir festa:', err)
       }
       setDeletingFesta(null)
     }
@@ -114,7 +114,7 @@ export function ListaFestasScreen() {
       className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${
         sortKey === k ? 'text-white' : 'border border-border text-muted-foreground hover:bg-muted'
       }`}
-      style={sortKey === k ? { background: 'linear-gradient(135deg, var(--agathon-pink), var(--agathon-purple))' } : undefined}
+      style={sortKey === k ? { background: 'linear-gradient(135deg, #0891b2, #0f766e)' } : undefined}
     >
       {label}
       {sortKey === k && (k === 'proximas' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
@@ -137,7 +137,7 @@ export function ListaFestasScreen() {
         <button
           onClick={() => { setEditingFesta(null); navigate('cadastrar') }}
           className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white sm:w-auto sm:py-2"
-          style={{ background: 'linear-gradient(135deg, var(--agathon-pink), var(--agathon-purple))' }}
+          style={{ background: 'linear-gradient(135deg, #0891b2, #0f766e)' }}
         >
           <Plus size={16} />
           Nova Festa

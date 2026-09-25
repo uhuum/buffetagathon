@@ -10,12 +10,9 @@ import {
   Clock,
   Users,
   Cake,
-  AlertCircle,
-  Info,
-  AlertTriangle,
 } from 'lucide-react'
 import { useApp } from '@/lib/app-context'
-import { formatDate, tipoLabel, tipoBadgeClass, getNotifications } from '@/lib/utils-app'
+import { formatDate, tipoLabel, tipoBadgeClass } from '@/lib/utils-app'
 import { parseISO, isThisMonth, isFuture, isToday, compareAsc } from 'date-fns'
 import { Festa } from '@/lib/types'
 
@@ -112,8 +109,6 @@ export function DashboardScreen() {
       .sort((a, b) => compareAsc(parseISO(a.data), parseISO(b.data)))
       .slice(0, 4)
   }, [festas])
-
-  const notifications = getNotifications(festas)
   const hojeKey = new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
   const atendimentosHoje = atendimentos.filter(a => a.data === hojeKey && a.status !== 'cancelado' && a.status !== 'realizado')
 
@@ -124,26 +119,6 @@ export function DashboardScreen() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Notificações */}
-      {notifications.length > 0 && (
-        <div className="space-y-2">
-          {notifications.slice(0, 3).map((notif, i) => {
-            const Icon = notif.type === 'danger' ? AlertCircle : notif.type === 'warning' ? AlertTriangle : Info
-            const colors = {
-              danger: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', icon: '#ef4444' },
-              warning: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: '#c9a227' },
-              info: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: '#3b82f6' },
-            }
-            const c = colors[notif.type]
-            return (
-              <div key={i} className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium sm:px-4 sm:py-3 ${c.bg} ${c.border} ${c.text}`}>
-                <Icon size={15} style={{ color: c.icon, flexShrink: 0, marginTop: 1 }} />
-                <span className="leading-snug">{notif.message}</span>
-              </div>
-            )
-          })}
-        </div>
-      )}
 
       {atendimentosHoje.length > 0 && <button onClick={()=>navigate('atendimentos')} className="w-full rounded-xl border border-violet-200 bg-violet-50 p-4 text-left"><p className="text-xs font-bold uppercase tracking-wide text-violet-600">Atendimentos de hoje</p><p className="mt-1 font-bold text-violet-950">Você tem {atendimentosHoje.length} atendimento{atendimentosHoje.length>1?'s':''} presencial{atendimentosHoje.length>1?'is':''} hoje</p><p className="mt-1 text-sm text-violet-700">{atendimentosHoje.map(a=>a.horario+' · '+a.cliente).join('  •  ')}</p></button>}
 

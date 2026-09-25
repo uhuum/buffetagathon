@@ -51,6 +51,10 @@ export function AdminNotificacoesScreen() {
   const [sendTarget, setSendTarget] = useState<string | null>(null) // null = todos
   const [sending, setSending] = useState(false)
   const [sendResult, setSendResult] = useState<string | null>(null)
+  const [history, setHistory] = useState<any[]>([])
+  const [testing, setTesting] = useState(false)
+
+  const loadHistory = useCallback(async () => { try { const r=await fetch('/api/notifications/history',{cache:'no-store'}); if(r.ok)setHistory(await r.json()) } catch {} }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -58,13 +62,14 @@ export function AdminNotificacoesScreen() {
     try {
       const data = await fetchDeviceTokensAdmin()
       setTokens(data)
+      await loadHistory()
     } catch (err) {
       setError('Erro ao carregar dispositivos.')
-      console.error('[AdminNotificacoes] Erro:', err)
+      console.error('Erro ao carregar notificações:', err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [loadHistory])
 
   useEffect(() => {
     load()
@@ -79,6 +84,8 @@ export function AdminNotificacoesScreen() {
       alert('Erro ao remover token.')
     }
   }
+
+  const handleTest = async () => { setTesting(true);setSendResult(null);try{const r=await fetch('/api/notifications/send-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'Buffet Agathon 🎉',body:'Teste de notificações realizado com sucesso!',data:{type:'test'}})});const j=await r.json();setSendResult(r.ok?`Teste concluído: ${j.sent ?? 0} enviado(s), ${j.failed ?? 0} falha(s), ${j.total ?? 0} dispositivo(s) verificado(s).`:`Erro: ${j.message||'falha no teste'}`);await load()}catch{setSendResult('Erro ao executar o teste.')}finally{setTesting(false)}}
 
   const handleSend = async () => {
     if (!title.trim() || !message.trim()) {
@@ -117,7 +124,7 @@ export function AdminNotificacoesScreen() {
       load()
     } catch (err) {
       setSendResult('Erro ao enviar. Tente novamente.')
-      console.error('[AdminNotificacoes] Erro ao enviar:', err)
+      console.error('Erro ao enviar notificação:', err)
     } finally {
       setSending(false)
     }
@@ -151,6 +158,8 @@ export function AdminNotificacoesScreen() {
           </div>
         </div>
       </div>
+
+      <div className="rounded-2xl border border-teal-200 bg-teal-50/60 p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold text-teal-900">Teste de notificações</h3><p className="mt-1 text-xs text-teal-800">Envia agora uma notificação de teste para todos os dispositivos ativos e registra o resultado.</p></div><Bell className="text-teal-700" size={20}/></div><button onClick={handleTest} disabled={testing} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">{testing?<RefreshCw size={16} className="animate-spin"/>:<Send size={16}/>} {testing?'Testando...':'Enviar notificação de teste'}</button></div>
 
       {/* Enviar notificação */}
       <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
@@ -218,6 +227,8 @@ export function AdminNotificacoesScreen() {
           </button>
         </div>
       </div>
+
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden"><div className="p-4 border-b border-border bg-teal-50"><h3 className="font-semibold text-sm">Histórico recente de entregas</h3></div>{history.length===0?<p className="p-5 text-sm text-center text-muted-foreground">Nenhum envio registrado ainda.</p>:<div className="divide-y max-h-72 overflow-y-auto">{history.slice(0,15).map((h:any)=><div key={h.id} className="flex items-start justify-between gap-3 p-3 text-sm"><div className="min-w-0"><p className="font-medium truncate">{h.title}</p><p className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString('pt-BR')}</p>{h.error&&<p className="text-xs text-red-600 mt-1">{h.error}</p>}</div><span className={'shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase '+(h.status==='sent'?'bg-green-100 text-green-700':h.status==='invalid'?'bg-orange-100 text-orange-700':'bg-red-100 text-red-700')}>{h.status==='sent'?'Enviado':h.status==='invalid'?'Inválido':'Falhou'}</span></div>)}</div>}</div>
 
       {/* Lista de dispositivos */}
       <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">

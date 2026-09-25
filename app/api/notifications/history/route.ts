@@ -1,0 +1,4 @@
+import{NextResponse}from'next/server'
+import{createServiceClient}from'@/lib/supabase/server'
+import{isAuthenticated}from'@/lib/auth'
+export async function GET(){if(!await isAuthenticated())return NextResponse.json({message:'Não autorizado'},{status:401});const supabase=createServiceClient();const{data,error}=await supabase.from('notification_deliveries').select('id,created_at,title,body,status,error,attempt_count,notification_type').order('created_at',{ascending:false}).limit(30);if(error)return NextResponse.json({message:error.message},{status:500});return NextResponse.json(data??[],{headers:{'Cache-Control':'no-store'}})}

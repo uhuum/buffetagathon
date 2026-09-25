@@ -12,6 +12,7 @@ import { ExportarPDFScreen } from '@/components/screens/exportar-pdf'
 import { ConfiguracoesScreen } from '@/components/screens/configuracoes'
 import { DetalhesFestaScreen } from '@/components/screens/detalhes-festa'
 import { AdminNotificacoesScreen } from '@/components/screens/admin-notificacoes'
+import { AtendimentosScreen } from '@/components/screens/atendimentos'
 
 function AppContent() {
   const { isLoggedIn, currentPage } = useApp()
@@ -30,6 +31,7 @@ function AppContent() {
     configuracoes: <ConfiguracoesScreen />,
     detalhes: <DetalhesFestaScreen />,
     'admin-notificacoes': <AdminNotificacoesScreen />,
+    atendimentos: <AtendimentosScreen />,
   }
 
   return (

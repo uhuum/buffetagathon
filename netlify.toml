@@ -31,3 +31,7 @@
 
 [functions."cron-uma-hora-antes"]
   schedule = "0 * * * *"
+
+# Todos os dias às 08:00 BRT: lembrete de atendimentos presenciais
+[functions."cron-atendimentos-hoje"]
+  schedule = "0 11 * * *"

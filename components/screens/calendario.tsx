@@ -89,7 +89,7 @@ function DayModal({ date, festas, onClose, onViewFesta }: DayModalProps) {
 }
 
 export function CalendarioScreen() {
-  const { festas, navigate, setViewingFesta } = useApp()
+  const { festas, atendimentos, navigate, setViewingFesta } = useApp()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
@@ -103,6 +103,9 @@ export function CalendarioScreen() {
     if (!festasByDate[f.data]) festasByDate[f.data] = []
     festasByDate[f.data].push(f)
   })
+
+  const atendimentosByDate: Record<string, number> = {}
+  atendimentos.filter(a => a.status !== 'cancelado').forEach(a => { atendimentosByDate[a.data] = (atendimentosByDate[a.data] || 0) + 1 })
 
   const handleDayClick = (day: Date) => {
     setSelectedDay(day)
@@ -177,6 +180,7 @@ export function CalendarioScreen() {
           { label: 'Buffet Agathon', color: '#3b82f6' },
           { label: 'Domicílio', color: '#22c55e' },
           { label: 'Outro Espaço', color: '#f97316' },
+          { label: 'Atendimento', color: '#7c3aed' },
         ].map(item => (
           <div key={item.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="h-2.5 w-2.5 rounded-full flex-shrink-0 sm:h-3 sm:w-3" style={{ backgroundColor: item.color }} />
@@ -207,6 +211,7 @@ export function CalendarioScreen() {
           {days.map((day, idx) => {
             const dateKey = format(day, 'yyyy-MM-dd')
             const dayFestas = festasByDate[dateKey] || []
+            const dayAtendimentos = atendimentosByDate[dateKey] || 0
             const isCurrentDay = isToday(day)
             const isLastInRow = (startWeekDay + idx + 1) % 7 === 0
             const isLastRow = idx >= days.length - 7
@@ -215,7 +220,7 @@ export function CalendarioScreen() {
               <div
                 key={dateKey}
                 onClick={() => handleDayClick(day)}
-                className={`min-h-[52px] border-b border-r border-border p-1 cursor-pointer transition-colors hover:bg-muted/50 sm:min-h-[80px] sm:p-1.5 ${
+                className={`min-h-[52px] border-b border-r p-1 cursor-pointer transition-all hover:bg-muted/50 sm:min-h-[80px] sm:p-1.5 ${dayFestas.length || dayAtendimentos ? 'border-[#c9a227]/60 bg-amber-50/30' : 'border-border'} ${
                   isLastInRow ? 'border-r-0' : ''
                 } ${isLastRow ? 'border-b-0' : ''}`}
               >
@@ -228,6 +233,7 @@ export function CalendarioScreen() {
                   {format(day, 'd')}
                 </div>
                 <div className="space-y-0.5">
+                  {dayAtendimentos > 0 && <div className="mb-1 inline-flex items-center rounded-full bg-violet-100 px-1.5 py-0.5 text-[8px] font-bold text-violet-700 sm:text-[10px]">{dayAtendimentos} atendimento{dayAtendimentos > 1 ? 's' : ''}</div>}
                   {/* Mobile: mostrar só pontos coloridos */}
                   <div className="flex flex-wrap gap-0.5 sm:hidden">
                     {dayFestas.slice(0, 3).map(f => (

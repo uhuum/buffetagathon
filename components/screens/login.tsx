@@ -13,15 +13,13 @@ export function LoginScreen() {
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setErro('')
-    setTimeout(() => {
-      const ok = login(usuario, senha)
-      if (!ok) setErro('Usuario ou senha invalidos.')
-      setLoading(false)
-    }, 500)
+    const ok = await login(usuario, senha)
+    if (!ok) setErro('Usuário ou senha inválidos.')
+    setLoading(false)
   }
 
   return (

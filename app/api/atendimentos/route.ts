@@ -1,0 +1,6 @@
+import { NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { isAuthenticated } from '@/lib/auth'
+export const dynamic='force-dynamic'
+export async function GET(){if(!await isAuthenticated())return NextResponse.json({message:'Não autorizado'},{status:401});const s=createServiceClient();const {data,error}=await s.from('atendimentos').select('*').order('data').order('horario');if(error)return NextResponse.json({message:error.message},{status:500});return NextResponse.json((data??[]).map((a:any)=>({...a,criadoEm:a.criado_em})),{headers:{'Cache-Control':'no-store'}})}
+export async function POST(r:Request){if(!await isAuthenticated())return NextResponse.json({message:'Não autorizado'},{status:401});const b=await r.json();const s=createServiceClient();const {data,error}=await s.from('atendimentos').insert({cliente:b.cliente,telefone:b.telefone||null,data:b.data,horario:b.horario,observacoes:b.observacoes||null,status:b.status||'agendado'}).select().single();if(error)return NextResponse.json({message:error.message},{status:500});return NextResponse.json({...data,criadoEm:data.criado_em},{status:201})}

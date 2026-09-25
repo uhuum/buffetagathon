@@ -1,164 +1,24 @@
 'use client'
-
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { AppState, Festa, Page } from './types'
-import {
-  fetchFestas,
-  createFesta,
-  updateFestaRow,
-  deleteFestaRow,
-} from './festas-service'
-
-interface AppContextType extends AppState {
-  loading: boolean
-  error: string | null
-  login: (usuario: string, senha: string) => boolean
-  logout: () => void
-  navigate: (page: Page) => void
-  addFesta: (festa: Omit<Festa, 'id' | 'criadoEm'>) => Promise<void>
-  updateFesta: (id: string, festa: Omit<Festa, 'id' | 'criadoEm'>) => Promise<void>
-  setConcluida: (id: string, concluida: boolean) => Promise<void>
-  deleteFesta: (id: string) => Promise<void>
-  refreshFestas: () => Promise<void>
-  setEditingFesta: (festa: Festa | null) => void
-  setViewingFesta: (festa: Festa | null) => void
-}
-
-const AppContext = createContext<AppContextType | null>(null)
-
-const AUTH_KEY = 'agenda-agathon-auth'
-
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [festas, setFestas] = useState<Festa[]>([])
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [currentPage, setCurrentPage] = useState<Page>('login')
-  const [editingFesta, setEditingFesta] = useState<Festa | null>(null)
-  const [viewingFesta, setViewingFesta] = useState<Festa | null>(null)
-  const [hydrated, setHydrated] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const refreshFestas = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await fetchFestas()
-      setFestas(data)
-    } catch (err) {
-      console.error('[v0] Erro ao carregar festas:', err)
-      setError('Não foi possível carregar as festas.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    const storedAuth = localStorage.getItem(AUTH_KEY)
-    if (storedAuth === 'true') {
-      setIsLoggedIn(true)
-      setCurrentPage('dashboard')
-    }
-    setHydrated(true)
-    refreshFestas()
-  }, [refreshFestas])
-
-  const login = (usuario: string, senha: string): boolean => {
-    if (usuario === 'edna' && senha === 'buffetagathon') {
-      setIsLoggedIn(true)
-      setCurrentPage('dashboard')
-      localStorage.setItem(AUTH_KEY, 'true')
-      return true
-    }
-    return false
-  }
-
-  const logout = () => {
-    setIsLoggedIn(false)
-    setCurrentPage('login')
-    localStorage.removeItem(AUTH_KEY)
-  }
-
-  const navigate = (page: Page) => {
-    setCurrentPage(page)
-  }
-
-  const addFesta = async (festaData: Omit<Festa, 'id' | 'criadoEm'>) => {
-    const nova = await createFesta(festaData)
-    setFestas(prev => [...prev, nova])
-    // Disparar notificação de nova festa (fire-and-forget)
-    fetch('/api/notifications/triggers/festa-criada', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tema: nova.tema,
-        data: nova.data,
-        horario: nova.horario,
-        cliente: nova.responsavel,
-      }),
-    }).catch(err => console.error('[AppContext] Trigger festa-criada falhou:', err))
-  }
-
-  const updateFesta = async (id: string, festaData: Omit<Festa, 'id' | 'criadoEm'>) => {
-    const atualizada = await updateFestaRow(id, festaData)
-    setFestas(prev => prev.map(f => (f.id === id ? atualizada : f)))
-    // Disparar notificação de festa alterada (fire-and-forget)
-    fetch('/api/notifications/triggers/festa-alterada', { method: 'POST' })
-      .catch(err => console.error('[AppContext] Trigger festa-alterada falhou:', err))
-  }
-
-  const setConcluida = async (id: string, concluida: boolean) => {
-    const festa = festas.find(f => f.id === id)
-    if (!festa) return
-    const { id: _id, criadoEm: _criadoEm, ...rest } = festa
-    const atualizada = await updateFestaRow(id, { ...rest, concluida })
-    setFestas(prev => prev.map(f => (f.id === id ? atualizada : f)))
-    setViewingFesta(prev => (prev && prev.id === id ? atualizada : prev))
-    // Disparar notificação de festa cancelada quando uma festa é des-concluída (revertida)
-    if (!concluida) {
-      fetch('/api/notifications/triggers/festa-cancelada', { method: 'POST' })
-        .catch(err => console.error('[AppContext] Trigger festa-cancelada falhou:', err))
-    }
-  }
-
-  const deleteFesta = async (id: string) => {
-    await deleteFestaRow(id)
-    setFestas(prev => prev.filter(f => f.id !== id))
-    // Disparar notificação de festa cancelada (fire-and-forget)
-    fetch('/api/notifications/triggers/festa-cancelada', { method: 'POST' })
-      .catch(err => console.error('[AppContext] Trigger festa-cancelada falhou:', err))
-  }
-
-  if (!hydrated) return null
-
-  return (
-    <AppContext.Provider
-      value={{
-        festas,
-        isLoggedIn,
-        currentPage,
-        editingFesta,
-        viewingFesta,
-        loading,
-        error,
-        login,
-        logout,
-        navigate,
-        addFesta,
-        updateFesta,
-        setConcluida,
-        deleteFesta,
-        refreshFestas,
-        setEditingFesta,
-        setViewingFesta,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
-  )
-}
-
-export function useApp() {
-  const ctx = useContext(AppContext)
-  if (!ctx) throw new Error('useApp must be used within AppProvider')
-  return ctx
-}
+import React,{createContext,useContext,useState,useEffect,useCallback}from'react'
+import {AppState,Festa,Page,Atendimento}from'./types'
+import{fetchFestas,createFesta,updateFestaRow,deleteFestaRow}from'./festas-service'
+import{fetchAtendimentos,createAtendimento,updateAtendimento as updateAtendimentoRow,deleteAtendimento as deleteAtendimentoRow}from'./atendimentos-service'
+interface C extends AppState{loading:boolean;error:string|null;login:(u:string,s:string)=>Promise<boolean>;logout:()=>Promise<void>;navigate:(p:Page)=>void;addFesta:(f:Omit<Festa,'id'|'criadoEm'>)=>Promise<void>;updateFesta:(id:string,f:Omit<Festa,'id'|'criadoEm'>)=>Promise<void>;setConcluida:(id:string,c:boolean)=>Promise<void>;deleteFesta:(id:string)=>Promise<void>;refreshFestas:()=>Promise<void>;refreshAtendimentos:()=>Promise<void>;addAtendimento:(a:Omit<Atendimento,'id'|'criadoEm'>)=>Promise<void>;updateAtendimento:(id:string,a:Partial<Atendimento>)=>Promise<void>;deleteAtendimento:(id:string)=>Promise<void>;setEditingFesta:(f:Festa|null)=>void;setViewingFesta:(f:Festa|null)=>void}
+const X=createContext<C|null>(null)
+export function AppProvider({children}:{children:React.ReactNode}){const[festas,setFestas]=useState<Festa[]>([]),[atendimentos,setAtendimentos]=useState<Atendimento[]>([]),[isLoggedIn,setIsLoggedIn]=useState(false),[currentPage,setCurrentPage]=useState<Page>('login'),[editingFesta,setEditingFesta]=useState<Festa|null>(null),[viewingFesta,setViewingFesta]=useState<Festa|null>(null),[hydrated,setHydrated]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState<string|null>(null)
+const refreshFestas=useCallback(async()=>{try{setLoading(true);setError(null);setFestas(await fetchFestas())}catch(e){console.error(e);setError('Não foi possível carregar as festas.')}finally{setLoading(false)}},[])
+const refreshAtendimentos=useCallback(async()=>{try{setAtendimentos(await fetchAtendimentos())}catch(e){console.error(e)}},[])
+useEffect(()=>{(async()=>{try{const r=await fetch('/api/auth/session',{cache:'no-store'}),j=await r.json();if(j.authenticated){setIsLoggedIn(true);setCurrentPage('dashboard');await Promise.all([refreshFestas(),refreshAtendimentos()])}}finally{setHydrated(true)}})()},[refreshFestas,refreshAtendimentos])
+const login=async(usuario:string,senha:string)=>{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario,senha})});if(!r.ok)return false;setIsLoggedIn(true);setCurrentPage('dashboard');await Promise.all([refreshFestas(),refreshAtendimentos()]);return true}
+const logout=async()=>{await fetch('/api/auth/logout',{method:'POST'});setIsLoggedIn(false);setCurrentPage('login');setFestas([]);setAtendimentos([])}
+const navigate=(p:Page)=>setCurrentPage(p)
+const addFesta=async(f:Omit<Festa,'id'|'criadoEm'>)=>{const n=await createFesta(f);setFestas(p=>[...p,n]);fetch('/api/notifications/triggers/festa-criada',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tema:n.tema,data:n.data,horario:n.horario,cliente:n.responsavel})}).catch(()=>{})}
+const updateFesta=async(id:string,f:Omit<Festa,'id'|'criadoEm'>)=>{const n=await updateFestaRow(id,f);setFestas(p=>p.map(x=>x.id===id?n:x));fetch('/api/notifications/triggers/festa-alterada',{method:'POST'}).catch(()=>{})}
+const setConcluida=async(id:string,c:boolean)=>{const f=festas.find(x=>x.id===id);if(!f)return;const{id:_i,criadoEm:_c,...rest}=f,n=await updateFestaRow(id,{...rest,concluida:c});setFestas(p=>p.map(x=>x.id===id?n:x));setViewingFesta(p=>p?.id===id?n:p)}
+const deleteFesta=async(id:string)=>{await deleteFestaRow(id);setFestas(p=>p.filter(x=>x.id!==id))}
+const addAtendimento=async(a:Omit<Atendimento,'id'|'criadoEm'>)=>{const n=await createAtendimento(a);setAtendimentos(p=>[...p,n])}
+const updateAtendimento=async(id:string,a:Partial<Atendimento>)=>{const current=atendimentos.find(x=>x.id===id);if(!current)return;const n=await updateAtendimentoRow(id,{...current,...a});setAtendimentos(p=>p.map(x=>x.id===id?n:x))}
+const deleteAtendimento=async(id:string)=>{await deleteAtendimentoRow(id);setAtendimentos(p=>p.filter(x=>x.id!==id))}
+if(!hydrated)return null
+return <X.Provider value={{festas,atendimentos,isLoggedIn,currentPage,editingFesta,viewingFesta,loading,error,login,logout,navigate,addFesta,updateFesta,setConcluida,deleteFesta,refreshFestas,refreshAtendimentos,addAtendimento,updateAtendimento,deleteAtendimento,setEditingFesta,setViewingFesta}}>{children}</X.Provider>}
+export function useApp(){const c=useContext(X);if(!c)throw new Error('useApp must be used within AppProvider');return c}

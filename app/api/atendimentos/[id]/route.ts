@@ -1,0 +1,5 @@
+import { NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { isAuthenticated } from '@/lib/auth'
+export async function PUT(r:Request,{params}:{params:Promise<{id:string}>}){if(!await isAuthenticated())return NextResponse.json({message:'Não autorizado'},{status:401});const {id}=await params,b=await r.json(),s=createServiceClient();const {data,error}=await s.from('atendimentos').update({cliente:b.cliente,telefone:b.telefone||null,data:b.data,horario:b.horario,observacoes:b.observacoes||null,status:b.status}).eq('id',id).select().single();if(error)return NextResponse.json({message:error.message},{status:500});return NextResponse.json({...data,criadoEm:data.criado_em})}
+export async function DELETE(_r:Request,{params}:{params:Promise<{id:string}>}){if(!await isAuthenticated())return NextResponse.json({message:'Não autorizado'},{status:401});const {id}=await params,s=createServiceClient();const {error}=await s.from('atendimentos').delete().eq('id',id);if(error)return NextResponse.json({message:error.message},{status:500});return NextResponse.json({success:true})}

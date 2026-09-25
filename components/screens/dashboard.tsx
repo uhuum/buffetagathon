@@ -87,7 +87,7 @@ function PartyCard({ festa, onClick }: { festa: Festa; onClick: () => void }) {
 }
 
 export function DashboardScreen() {
-  const { festas, navigate, setViewingFesta } = useApp()
+  const { festas, atendimentos, navigate, setViewingFesta } = useApp()
 
   const stats = useMemo(() => {
     const doMes = festas.filter(f => isThisMonth(parseISO(f.data)))
@@ -114,6 +114,8 @@ export function DashboardScreen() {
   }, [festas])
 
   const notifications = getNotifications(festas)
+  const hojeKey = new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+  const atendimentosHoje = atendimentos.filter(a => a.data === hojeKey && a.status !== 'cancelado' && a.status !== 'realizado')
 
   const handleViewFesta = (festa: Festa) => {
     setViewingFesta(festa)
@@ -142,6 +144,8 @@ export function DashboardScreen() {
           })}
         </div>
       )}
+
+      {atendimentosHoje.length > 0 && <button onClick={()=>navigate('atendimentos')} className="w-full rounded-xl border border-violet-200 bg-violet-50 p-4 text-left"><p className="text-xs font-bold uppercase tracking-wide text-violet-600">Atendimentos de hoje</p><p className="mt-1 font-bold text-violet-950">Você tem {atendimentosHoje.length} atendimento{atendimentosHoje.length>1?'s':''} presencial{atendimentosHoje.length>1?'is':''} hoje</p><p className="mt-1 text-sm text-violet-700">{atendimentosHoje.map(a=>a.horario+' · '+a.cliente).join('  •  ')}</p></button>}
 
       {/* Cards de estatísticas */}
       <div>

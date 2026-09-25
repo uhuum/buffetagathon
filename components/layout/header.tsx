@@ -20,6 +20,8 @@ const pageTitles: Record<Page, string> = {
   exportar:      'Exportar PDF',
   configuracoes: 'Configurações',
   detalhes:      'Detalhes da Festa',
+  'admin-notificacoes': 'Notificações',
+  atendimentos: 'Atendimentos',
 }
 
 interface HeaderProps {

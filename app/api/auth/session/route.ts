@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
-import { isAuthenticated } from '@/lib/auth'
+import{NextResponse}from'next/server'
+import{getAuthenticatedUser}from'@/lib/auth'
 export const dynamic='force-dynamic'
-export async function GET(){return NextResponse.json({authenticated:await isAuthenticated()},{headers:{'Cache-Control':'no-store'}})}
+export async function GET(){const user=await getAuthenticatedUser();return NextResponse.json({authenticated:Boolean(user),email:user?.email??null},{headers:{'Cache-Control':'no-store'}})}

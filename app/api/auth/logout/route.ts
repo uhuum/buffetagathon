@@ -1,3 +1,3 @@
-import { NextResponse } from 'next/server'
-import { clearSession } from '@/lib/auth'
-export async function POST(){await clearSession();return NextResponse.json({success:true})}
+import{NextResponse}from'next/server'
+import{createClient}from'@/lib/supabase/server'
+export async function POST(){const supabase=await createClient();await supabase.auth.signOut();return NextResponse.json({success:true})}

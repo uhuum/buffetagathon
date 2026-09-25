@@ -7,7 +7,7 @@ import { useApp } from '@/lib/app-context'
 
 export function LoginScreen() {
   const { login } = useApp()
-  const [usuario, setUsuario] = useState('')
+  const [email, setE-mail] = useState('')
   const [senha, setSenha] = useState('')
   const [showSenha, setShowSenha] = useState(false)
   const [erro, setErro] = useState('')
@@ -17,7 +17,7 @@ export function LoginScreen() {
     e.preventDefault()
     setLoading(true)
     setErro('')
-    const ok = await login(usuario, senha)
+    const ok = await login(email, senha)
     if (!ok) setErro('Usuário ou senha inválidos.')
     setLoading(false)
   }
@@ -27,8 +27,7 @@ export function LoginScreen() {
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: 'linear-gradient(135deg, #1a0a2e 0%, #2d1154 50%, #1a0a2e 100%)' }}
     >
-      {/* Blobs decorativos coloridos */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+<div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="absolute top-10 left-10 h-48 w-48 rounded-full opacity-20" style={{ backgroundColor: 'var(--agathon-pink)', filter: 'blur(70px)' }} />
         <div className="absolute top-24 right-16 h-36 w-36 rounded-full opacity-15" style={{ backgroundColor: 'var(--agathon-blue)', filter: 'blur(55px)' }} />
         <div className="absolute bottom-20 left-24 h-40 w-40 rounded-full opacity-15" style={{ backgroundColor: 'var(--agathon-orange)', filter: 'blur(60px)' }} />
@@ -37,8 +36,7 @@ export function LoginScreen() {
 
       <div className="relative w-full max-w-sm">
         <div className="rounded-3xl bg-white shadow-2xl overflow-hidden">
-          {/* Topo roxo-escuro com logo */}
-          <div
+<div
             className="flex flex-col items-center justify-center px-8 pt-10 pb-7"
             style={{ background: 'linear-gradient(160deg, #1a0a2e 0%, #2d1154 100%)' }}
           >
@@ -59,9 +57,7 @@ export function LoginScreen() {
             <p className="text-sm mt-1 font-medium" style={{ color: 'var(--agathon-gold)' }}>
               Sistema de Agenda de Festas
             </p>
-
-            {/* Faixa de cores da logo */}
-            <div className="flex gap-1.5 mt-5">
+<div className="flex gap-1.5 mt-5">
               {[
                 'var(--agathon-pink)',
                 'var(--agathon-blue)',
@@ -74,20 +70,18 @@ export function LoginScreen() {
               ))}
             </div>
           </div>
-
-          {/* Formulario */}
-          <form onSubmit={handleSubmit} className="px-8 py-8 space-y-5">
+<form onSubmit={handleSubmit} className="px-8 py-8 space-y-5">
             <div>
-              <label htmlFor="usuario" className="block text-sm font-semibold text-foreground mb-1.5">
-                Usuario
+              <label htmlFor="email" className="block text-sm font-semibold text-foreground mb-1.5">
+                E-mail
               </label>
               <input
-                id="usuario"
-                type="text"
-                autoComplete="username"
-                value={usuario}
-                onChange={e => setUsuario(e.target.value)}
-                placeholder="Digite seu usuario"
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={e => setE-mail(e.target.value)}
+                placeholder="Digite seu e-mail"
                 required
                 className="w-full rounded-xl border-2 border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition"
                 style={{ outlineColor: 'var(--agathon-pink)' }}

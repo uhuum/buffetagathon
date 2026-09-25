@@ -162,7 +162,7 @@ export function CadastrarFestaScreen() {
       reset()
       navigate('lista')
     } catch (err) {
-      console.error('[v0] Erro ao salvar festa:', err)
+      console.error('Erro ao salvar festa:', err)
       alert('Nao foi possivel salvar a festa. Tente novamente.')
     }
   }
@@ -178,7 +178,7 @@ export function CadastrarFestaScreen() {
         {/* Header */}
         <div
           className="px-4 py-4 border-b border-border flex items-center gap-4 sm:px-6 sm:py-5"
-          style={{ background: 'linear-gradient(135deg, #1a0a2e 0%, #2d1154 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #073b3a 0%, #0f766e 100%)' }}
         >
           <div>
             <h2 className="text-base font-bold text-white sm:text-lg">
@@ -403,7 +403,7 @@ export function CadastrarFestaScreen() {
               type="submit"
               disabled={isSubmitting}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg, var(--agathon-pink), var(--agathon-purple))' }}
+              style={{ background: 'linear-gradient(135deg, #0891b2, #0f766e)' }}
             >
               <Save size={16} />
               {editingFesta ? 'Salvar Alterações' : 'Cadastrar Festa'}

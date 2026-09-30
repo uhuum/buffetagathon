@@ -7,19 +7,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendPushNotificationToMany } from '@/lib/fcm-server'
 
-function getWeekendDates(): string[] {
-  const now = new Date()
-  // Hoje é segunda-feira; calcular sexta (dia 5), sábado (6) e domingo (7)
-  const day = now.getDay() // 1 = segunda
-  const friday = new Date(now)
-  friday.setDate(now.getDate() + (5 - day)) // próxima sexta
-  const saturday = new Date(friday)
-  saturday.setDate(friday.getDate() + 1)
-  const sunday = new Date(friday)
-  sunday.setDate(friday.getDate() + 2)
+function getWeekendRange(): { start: string; end: string } {
+  // Faz o cálculo sempre no calendário de São Paulo, sem depender do fuso UTC do servidor.
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+  }).formatToParts(new Date())
 
-  const fmt = (d: Date) => d.toISOString().split('T')[0]
-  return [fmt(friday), fmt(saturday), fmt(sunday)]
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  const year = Number(get('year'))
+  const month = Number(get('month'))
+  const day = Number(get('day'))
+  const weekday = get('weekday')
+  const weekdayIndex: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+  }
+
+  const currentDay = weekdayIndex[weekday]
+  const daysUntilFriday = (5 - currentDay + 7) % 7
+  const base = new Date(Date.UTC(year, month - 1, day))
+  const friday = new Date(base)
+  friday.setUTCDate(base.getUTCDate() + daysUntilFriday)
+  const sunday = new Date(friday)
+  sunday.setUTCDate(friday.getUTCDate() + 2)
+
+  const fmt = (d: Date) => d.toISOString().slice(0, 10)
+  return { start: fmt(friday), end: fmt(sunday) }
 }
 
 export async function GET(request: NextRequest) {
@@ -31,19 +47,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = createServiceClient()
-    const dates = getWeekendDates()
+    const { start, end } = getWeekendRange()
 
     // Buscar festas do final de semana
     const { data: festas, error: festasError } = await supabase
       .from('festas')
       .select('id, tema, data, horario')
-      .in('data', dates)
+      .gte('data', start)
+      .lte('data', end)
       .eq('concluida', false)
       .order('data', { ascending: true })
 
     if (festasError) throw festasError
 
-    const count = (festas ?? []).length
+    const count = new Set((festas ?? []).map((f: { id: string }) => f.id)).size
     if (count === 0) {
       return NextResponse.json({ success: true, message: 'Nenhuma festa no final de semana.' })
     }
@@ -58,7 +75,7 @@ export async function GET(request: NextRequest) {
     if (tokenList.length === 0) return NextResponse.json({ success: true, sent: 0 })
 
     const title = 'Agenda do final de semana'
-    const body = `Olá!\nNeste final de semana temos ${count} festa${count > 1 ? 's' : ''} agendada${count > 1 ? 's' : ''}.\nConfira sua agenda.`
+    const body = `Esse final de semana tem ${count} festa${count === 1 ? '' : 's'}, não esqueça! Entre e confira mais detalhes.`
 
     const result = await sendPushNotificationToMany(tokenList, title, body, {
       type: 'agenda_fim_de_semana',

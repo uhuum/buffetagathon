@@ -1,14 +1,13 @@
 /**
  * API Route chamada pela Netlify Scheduled Function `cron-agenda-fim-de-semana`.
  * Schedule: 0 12 * * 1  (toda segunda-feira às 09:00 BRT / 12:00 UTC)
- * Busca as festas do final de semana (sex, sáb, dom) e envia um resumo.
+ * Busca todas as festas cadastradas para o final de semana (sex, sáb, dom) e envia um resumo.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendPushNotificationToMany } from '@/lib/fcm-server'
 
 function getWeekendRange(): { start: string; end: string } {
-  // Faz o cálculo sempre no calendário de São Paulo, sem depender do fuso UTC do servidor.
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Sao_Paulo',
     year: 'numeric',
@@ -39,7 +38,6 @@ function getWeekendRange(): { start: string; end: string } {
 }
 
 export async function GET(request: NextRequest) {
-  // Validar secret do cron
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
@@ -49,13 +47,14 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient()
     const { start, end } = getWeekendRange()
 
-    // Buscar festas do final de semana
+    // A agenda semanal deve contar TODAS as festas cadastradas para sex/sáb/dom.
+    // Não filtramos por "concluida", pois esse status é operacional e não deve
+    // fazer uma festa desaparecer do total da agenda do fim de semana.
     const { data: festas, error: festasError } = await supabase
       .from('festas')
       .select('id, tema, data, horario')
       .gte('data', start)
       .lte('data', end)
-      .eq('concluida', false)
       .order('data', { ascending: true })
 
     if (festasError) throw festasError
@@ -65,14 +64,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Nenhuma festa no final de semana.' })
     }
 
-    // Buscar tokens ativos
     const { data: tokens } = await supabase
       .from('device_tokens')
       .select('token')
       .eq('is_active', true)
 
     const tokenList = (tokens ?? []).map((t: { token: string }) => t.token)
-    if (tokenList.length === 0) return NextResponse.json({ success: true, sent: 0 })
+    if (tokenList.length === 0) return NextResponse.json({ success: true, sent: 0, festas: count })
 
     const title = 'Agenda do final de semana'
     const body = `Esse final de semana tem ${count} festa${count === 1 ? '' : 's'}, não esqueça! Entre e confira mais detalhes.`
@@ -88,7 +86,7 @@ export async function GET(request: NextRequest) {
         .in('token', result.invalidTokens)
     }
 
-    console.log(`[Cron agenda-fim-de-semana] Enviado para ${result.sent} dispositivos.`)
+    console.log(`[Cron agenda-fim-de-semana] ${count} festa(s), enviado para ${result.sent} dispositivos.`)
     return NextResponse.json({ success: true, sent: result.sent, festas: count })
   } catch (err) {
     console.error('[Cron agenda-fim-de-semana] Erro:', err)

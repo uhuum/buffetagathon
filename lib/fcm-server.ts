@@ -65,6 +65,13 @@ export async function sendPushNotification({ token, title, body, data, imageUrl 
   let lastError = 'FCM_ERROR'
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
+      const expiresAt = data?.expires_at ? Date.parse(data.expires_at) : NaN
+      if (Number.isFinite(expiresAt) && Date.now() >= expiresAt) {
+        return { success: false, error: 'NOTIFICATION_EXPIRED', attempts: attempt - 1 }
+      }
+      const ttl = Number.isFinite(expiresAt)
+        ? Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
+        : Math.max(0, Math.min(86400, Number(data?.ttl_seconds) || 86400))
       const accessToken = await getFirebaseAccessToken()
       const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
         method: 'POST',
@@ -73,9 +80,9 @@ export async function sendPushNotification({ token, title, body, data, imageUrl 
           token,
           notification: { title, body, ...(imageUrl ? { image: imageUrl } : {}) },
           data: data ?? {},
-          android: { priority: 'high', notification: { sound: 'default' } },
+          android: { priority: 'high', ttl: `${ttl}s`, notification: { sound: 'default' } },
           webpush: {
-            headers: { Urgency: 'high', TTL: '86400' },
+            headers: { Urgency: 'high', TTL: String(ttl) },
             notification: { icon: '/pwa-192.png', badge: '/pwa-192.png', tag: data?.tag || data?.type || 'agathon', renotify: true },
             fcm_options: { link: data?.url || '/' },
           },

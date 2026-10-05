@@ -1,33 +1,13 @@
-/**
- * Netlify Scheduled Function
- * Schedule: 0 * * * *  (a cada hora exata)
- *
- * Delega para a API Route Next.js /api/cron/uma-hora-antes.
- */
-import type { Handler } from '@netlify/functions'
-
-const handler: Handler = async () => {
-  const baseUrl = process.env.URL
-  if (!baseUrl) {
-    console.error('[Netlify Cron] Variável URL não configurada.')
-    return { statusCode: 500, body: 'Variável URL ausente.' }
-  }
-
-  const secret = process.env.CRON_SECRET
-  if (!secret) {
-    console.error('[Netlify Cron] Variável CRON_SECRET não configurada.')
-    return { statusCode: 500, body: 'Variável CRON_SECRET ausente.' }
-  }
-
+/** Verifica a cada minuto; agendamento definido em netlify.toml. */
+export default async () => {
+  const baseUrl = Netlify.env.get('URL')
+  const secret = Netlify.env.get('CRON_SECRET')
+  if (!baseUrl || !secret) throw new Error('Configuração do cron ausente')
   const response = await fetch(`${baseUrl}/api/cron/uma-hora-antes`, {
-    method: 'GET',
     headers: { Authorization: `Bearer ${secret}` },
+    signal: AbortSignal.timeout(25_000),
   })
-
   const body = await response.text()
   console.log(`[Netlify Cron uma-hora-antes] status=${response.status} body=${body}`)
-
-  return { statusCode: response.status, body }
+  if (!response.ok) throw new Error(`Falha no cron: ${response.status}`)
 }
-
-export { handler }

@@ -45,6 +45,7 @@ self.addEventListener('fetch', (event) => {
 })
 
 messaging.onBackgroundMessage((payload) => {
+  if (payload.data?.expires_at && Date.now() >= Date.parse(payload.data.expires_at)) return
   if (payload.notification) return
   self.registration.showNotification(payload.data?.title || 'Buffet Agathon', {
     body: payload.data?.body || 'Nova atualizacao disponivel',

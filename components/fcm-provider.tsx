@@ -28,10 +28,11 @@ export function FCMProvider() {
           if (token) await saveDeviceToken(token)
         }
 
-        foregroundUnsubscribe = await setupForegroundMessageListener(({ title, body }) => {
+        foregroundUnsubscribe = await setupForegroundMessageListener(({ title, body, data }) => {
+          if (data?.expires_at && Date.now() >= Date.parse(data.expires_at)) return
           // Evita duplicidade: em foreground usamos a notificacao local uma unica vez.
           if (Notification.permission === 'granted') {
-            registration.showNotification(title, { body, icon: '/pwa-192.png', badge: '/pwa-192.png', tag: 'agathon-foreground' })
+            registration.showNotification(title, { body, icon: '/pwa-192.png', badge: '/pwa-192.png', tag: data?.tag || data?.type || 'agathon-foreground', data })
           }
         })
       } catch (err) {

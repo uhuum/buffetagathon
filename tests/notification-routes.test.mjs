@@ -112,14 +112,14 @@ test('segredo ausente nunca autoriza', async () => {
     assert.equal((await h.get()).status, 401)
   }
 })
-test('resumo usa contagem exata, sem filtro de conclusão, e mostra as datas', async () => {
+test('resumo usa contagem exata, sem filtro de conclusão, e convida a conferir a agenda', async () => {
   const h = harness(weekend, { count: 1501 })
   assert.equal((await h.get()).body.festas, 1501)
   const select = h.calls.find(c => c[0] === 'festas' && c[1] === 'select')
   assert.equal(select[3].count, 'exact'); assert.equal(select[3].head, true)
   assert.ok(!h.calls.some(c => c[1] === 'or'))
   const push = h.calls.find(c => c[0] === 'push')
-  assert.match(push[3], /02\/10 a 04\/10: 1501 festas/)
+  assert.equal(push[3], 'Esse final de semana tem 1501 festas. Entre e confira!')
 })
 test('erro na consulta dos dispositivos retorna falha', async () => {
   const h = harness(reminder, { tokenError: { message: 'simulated' } })

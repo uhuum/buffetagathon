@@ -44,8 +44,7 @@ export async function GET(request: NextRequest) {
     if (tokenList.length === 0) return NextResponse.json({ success: true, sent: 0, festas: count })
 
     const title = 'Agenda do final de semana'
-    const dateLabel = (date: string) => `${date.slice(8, 10)}/${date.slice(5, 7)}`
-    const body = `Agenda de ${dateLabel(start)} a ${dateLabel(end)}: ${count} festa${count === 1 ? '' : 's'} cadastrada${count === 1 ? '' : 's'}. Entre e confira os detalhes atualizados.`
+    const body = `Esse final de semana tem ${count} festa${count === 1 ? '' : 's'}. Entre e confira!`
 
     const result = await sendPushNotificationToMany(tokenList, title, body, {
       type: 'agenda_fim_de_semana',

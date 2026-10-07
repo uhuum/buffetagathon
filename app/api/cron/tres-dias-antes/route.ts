@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendPushNotificationToMany } from '@/lib/fcm-server'
 import { addDays } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { weekendRange } from '@/lib/notification-time'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -36,11 +36,20 @@ export async function GET(request: NextRequest) {
     const tokenList = (tokens ?? []).map((t: { token: string }) => t.token)
     if (tokenList.length === 0) return NextResponse.json({ success: true, sent: 0 })
 
-    const count = festas?.length ?? 0
+    if (!festas?.length) return NextResponse.json({ success: true, festas: 0, sent: 0 })
+
+    const { start, end } = weekendRange(new Date())
+    const { count, error: countError } = await supabase
+      .from('festas')
+      .select('id', { count: 'exact', head: true })
+      .gte('data', start)
+      .lte('data', end)
+    if (countError) throw countError
+    if (count === null) throw new Error('Contagem de festas indisponível')
     if (count === 0) return NextResponse.json({ success: true, festas: 0, sent: 0 })
 
     const title = 'Agenda do final de semana'
-    const body = `Esse final de semana tem ${count} festa${count > 1 ? 's' : ''}, não esqueça! Entre e confira mais detalhes.`
+    const body = `Esse final de semana tem ${count} festa${count === 1 ? '' : 's'}. Entre e confira!`
     const result = await sendPushNotificationToMany(tokenList, title, body, { type: 'tres_dias_antes' })
 
     if (result.invalidTokens.length > 0) {

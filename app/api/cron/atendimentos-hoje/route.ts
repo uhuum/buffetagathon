@@ -1,5 +1,70 @@
-import{NextRequest,NextResponse}from'next/server'
-import{createServiceClient}from'@/lib/supabase/server'
-import{sendPushNotificationToMany}from'@/lib/fcm-server'
-function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
-export async function GET(r:NextRequest){if(r.headers.get('authorization')!=='Bearer '+process.env.CRON_SECRET)return NextResponse.json({message:'Não autorizado'},{status:401});const s=createServiceClient(),d=today();const{data:a,error}=await s.from('atendimentos').select('cliente,horario').eq('data',d).in('status',['agendado','confirmado']).order('horario');if(error)return NextResponse.json({message:error.message},{status:500});if(!a?.length)return NextResponse.json({success:true,sent:0});const{data:rows}=await s.from('device_tokens').select('token').eq('is_active',true),tokens=(rows??[]).map((x:any)=>x.token);let sent=0,failed=0;for(const item of a){const z=await sendPushNotificationToMany(tokens,'Atendimento presencial hoje','Hoje você tem atendimento presencial às '+item.horario+' com '+item.cliente+'. Confirme com a pessoa.',{type:'atendimento_hoje',url:'/'});sent+=z.sent;failed+=z.failed;if(z.invalidTokens.length)await s.from('device_tokens').update({is_active:false}).in('token',z.invalidTokens)}return NextResponse.json({success:true,atendimentos:a.length,sent,failed})}
+import { NextRequest, NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { sendPushNotificationToMany } from '@/lib/fcm-server'
+import { localDate } from '@/lib/notification-time'
+
+export async function GET(request: NextRequest) {
+  const secret = process.env.CRON_SECRET
+  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
+  }
+
+  try {
+    const supabase = createServiceClient()
+    const date = localDate(new Date())
+    const { data: appointments, error } = await supabase.from('atendimentos')
+      .select('id, cliente, horario').eq('data', date)
+      .in('status', ['agendado', 'confirmado']).order('horario')
+    if (error) throw error
+    if (!appointments?.length) return NextResponse.json({ success: true, sent: 0 })
+
+    const { data: devices, error: devicesError } = await supabase.from('device_tokens')
+      .select('id, token').eq('is_active', true)
+    if (devicesError) throw devicesError
+    if (!devices?.length) return NextResponse.json({ success: true, atendimentos: appointments.length, sent: 0 })
+
+    const tokenIds = new Map(devices.map(device => [device.token, device.id]))
+    let tokens = devices.map(device => device.token)
+    let sent = 0
+    let failed = 0
+    for (const appointment of appointments) {
+      const title = 'Atendimento presencial hoje'
+      const body = `Hoje você tem atendimento presencial às ${appointment.horario} com ${appointment.cliente}. Confirme com a pessoa.`
+      const result = await sendPushNotificationToMany(tokens, title, body, {
+        type: 'atendimento_hoje',
+        tag: `atendimento_hoje:${date}:${appointment.id}`,
+        url: '/',
+      })
+      sent += result.sent
+      failed += result.failed
+
+      const { error: logError } = await supabase.from('notification_deliveries').insert(
+        result.deliveries.map(delivery => ({
+          token_id: tokenIds.get(delivery.token) ?? null,
+          token_preview: delivery.token.slice(0, 12) + '...',
+          title,
+          body,
+          notification_type: 'atendimento_hoje',
+          status: delivery.success ? 'sent' : result.invalidTokens.includes(delivery.token) ? 'invalid' : 'failed',
+          provider_message_id: delivery.messageId ?? null,
+          error: delivery.error ?? null,
+          attempt_count: delivery.attempts,
+        })),
+      )
+      // O aceite do provedor não comprova que o celular exibiu a notificação.
+      if (logError) console.error('[Cron atendimentos-hoje] Falha ao registrar envios:', logError)
+
+      if (result.invalidTokens.length) {
+        const { error: deactivateError } = await supabase.from('device_tokens')
+          .update({ is_active: false }).in('token', result.invalidTokens)
+        if (deactivateError) console.error('[Cron atendimentos-hoje] Falha ao desativar dispositivos:', deactivateError)
+        tokens = tokens.filter(token => !result.invalidTokens.includes(token))
+      }
+    }
+    console.log(`[Cron atendimentos-hoje] ${appointments.length} atendimentos, ${sent} envios aceitos, ${failed} falhas.`)
+    return NextResponse.json({ success: failed === 0, atendimentos: appointments.length, sent, failed })
+  } catch (error) {
+    console.error('[Cron atendimentos-hoje] Erro:', error)
+    return NextResponse.json({ message: 'Erro interno' }, { status: 500 })
+  }
+}

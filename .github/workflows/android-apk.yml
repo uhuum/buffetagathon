@@ -1,0 +1,35 @@
+name: Agenda Agathon - APK Android
+on:
+  workflow_dispatch:
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Instalar Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Configuracao Firebase Android
+        env:
+          FIREBASE_JSON_B64: ${{ secrets.AGATHON_GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          if [ -z "$FIREBASE_JSON_B64" ]; then
+            echo "::error::Configure AGATHON_GOOGLE_SERVICES_JSON_B64 nos segredos."
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_JSON_B64" | base64 --decode > android-native/app/google-services.json
+      - name: Montar APK debug
+        working-directory: android-native
+        run: gradle --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agenda-agathon-android-debug
+          path: android-native/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

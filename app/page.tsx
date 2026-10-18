@@ -1,6 +1,7 @@
 'use client'
 
 import { AppProvider, useApp } from '@/lib/app-context'
+import { NativePushProvider } from '@/components/native-push-provider'
 import { AppShell } from '@/components/layout/app-shell'
 import { LoginScreen } from '@/components/screens/login'
 import { DashboardScreen } from '@/components/screens/dashboard'
@@ -44,6 +45,7 @@ function AppContent() {
 export default function Page() {
   return (
     <AppProvider>
+      <NativePushProvider />
       <AppContent />
     </AppProvider>
   )

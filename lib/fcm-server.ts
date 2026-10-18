@@ -80,7 +80,7 @@ export async function sendPushNotification({ token, title, body, data, imageUrl 
           token,
           notification: { title, body, ...(imageUrl ? { image: imageUrl } : {}) },
           data: data ?? {},
-          android: { priority: 'high', ttl: `${ttl}s`, notification: { sound: 'default' } },
+          android: { priority: 'high', ttl: `${ttl}s`, notification: { sound: 'default', channel_id: 'agathon_alertas' } },
           webpush: {
             headers: { Urgency: 'high', TTL: String(ttl) },
             notification: { icon: '/pwa-192.png', badge: '/pwa-192.png', tag: data?.tag || data?.type || 'agathon', renotify: true },

@@ -7,6 +7,8 @@ export function FCMProvider() {
   const initialized = useRef(false)
   useEffect(() => {
     if (initialized.current || typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+    // O APK usa o Firebase nativo, nao o Web Push do navegador.
+    if (navigator.userAgent.includes('AgathonAndroid/')) return
     initialized.current = true
     let foregroundUnsubscribe: (() => void) | undefined
 
